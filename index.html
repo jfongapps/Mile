@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -391,7 +392,18 @@ select option{background:var(--bg3)}
       <div class="hero" id="hero" onclick="heroTap()">
         <div class="hero-ring" id="hero-ring">🚗</div>
         <div class="hero-h" id="hero-h">Start a Trip</div>
-        <div class="hero-s" id="hero-s">Tap to begin recording</div>
+        <div class="hero-s" id="hero-s">Tap to detect location &amp; begin</div>
+        <div id="hero-loc-row" style="display:none;margin-top:14px;background:var(--bg3);border:1px solid var(--line);border-radius:10px;padding:10px 14px;text-align:left">
+          <div style="font-size:10px;color:var(--t3);font-family:var(--mono);margin-bottom:3px">START LOCATION</div>
+          <div id="hero-loc-val" style="font-size:13px;font-weight:500;color:var(--text)">Detecting…</div>
+        </div>
+      </div>
+      <div id="odo-strip" style="display:none;margin:-8px 0 14px;padding:0 4px">
+        <div style="background:var(--bg2);border:1px solid var(--line);border-radius:10px;padding:10px 14px;display:flex;align-items:center;gap:10px;cursor:pointer" onclick="openSheet('sw-odo')">
+          <span style="font-size:15px">🔢</span>
+          <span style="font-size:12px;color:var(--t3)" id="odo-strip-val">Add odometer reading (optional)</span>
+          <span style="font-size:11px;color:var(--blue);margin-left:auto">Edit</span>
+        </div>
       </div>
 
       <!-- Purpose selector -->
@@ -446,7 +458,11 @@ select option{background:var(--bg3)}
         <div style="padding:12px 15px;display:flex;flex-direction:column;gap:9px">
           <input type="text" id="exp-name" placeholder="Full name" />
           <input type="text" id="exp-rego" placeholder="Vehicle registration — e.g. ABC123" />
-          <select id="exp-fy"><option value="2024-25">FY 2024–25</option><option value="2023-24">FY 2023–24</option></select>
+          <select id="exp-fy">
+            <option value="2025-26">FY 2025–26</option>
+            <option value="2024-25">FY 2024–25</option>
+            <option value="2023-24">FY 2023–24</option>
+          </select>
         </div>
       </div>
       <div class="es"><div class="esh">Preview — Excel columns</div>
@@ -489,7 +505,7 @@ select option{background:var(--bg3)}
     <div class="cp-idle" id="cp-idle">
       <div class="cp-idle-ring" id="cp-ring">🚗</div>
       <div class="cp-idle-h" id="cp-idle-h">Ready to record</div>
-      <div class="cp-idle-s">Select purpose, then tap START</div>
+      <div class="cp-idle-s">Select purpose, then tap START — location auto-detected</div>
       <div class="cp-purpose-grid" id="cp-pg"></div>
       <button class="cp-start-btn" onclick="cpStart()">▶&nbsp; START TRIP</button>
     </div>
@@ -516,7 +532,7 @@ select option{background:var(--bg3)}
       <div class="cp-confirm" id="cp-confirm">
         <div style="font-size:44px;margin-bottom:8px">🏁</div>
         <div class="cp-confirm-title">End this trip?</div>
-        <div class="cp-confirm-sub">Trip will be saved with GPS-tracked distance.<br>Destination auto-detected.</div>
+        <div class="cp-confirm-sub">GPS distance &amp; destination auto-detected.<br>Trip saves instantly — no typing needed.</div>
         <button class="cp-conf-yes" onclick="cpEndTrip()">✓ &nbsp;Yes, Save Trip</button>
         <button class="cp-conf-no" onclick="document.getElementById('cp-confirm').classList.remove('on')">← Keep Recording</button>
       </div>
@@ -524,25 +540,21 @@ select option{background:var(--bg3)}
 
     <div class="cp-hint">
       <span class="cp-hint-icon">ℹ</span>
-      <span class="cp-hint-text">Mirror this screen via iPhone Screen Mirroring → your car display for CarPlay-style operation</span>
+      <span class="cp-hint-text">iPhone Control Centre → Screen Mirroring → your head unit &nbsp;·&nbsp; All controls work from the car screen</span>
     </div>
   </div>
 </div>
 
 <!-- ═══════════════════ SHEETS ═══════════════════ -->
 
-<!-- Start trip -->
-<div class="sw" id="sw-start">
+<!-- Odometer (optional, shown only if user taps odo field on hero) -->
+<div class="sw" id="sw-odo">
   <div class="sh-panel">
     <div class="sh-handle"></div>
-    <div class="sh-title">New Trip</div>
-    <div class="sh-sub">GPS locating your start position…</div>
-    <div class="f"><label class="fl">From</label><div class="fr"><input type="text" id="s-from" placeholder="Start location" /><button class="lb" onclick="detectLoc('s-from')">📍</button></div></div>
-    <div class="f"><label class="fl">To (optional)</label><div class="fr"><input type="text" id="s-to" placeholder="Fill on arrival" /><button class="lb" onclick="detectLoc('s-to')">📍</button></div></div>
-    <div class="f"><label class="fl">Odometer start</label><input type="number" id="s-odo" placeholder="Optional km" /></div>
-    <div class="f" style="margin-bottom:16px"><label class="fl">Purpose</label><div class="pg" id="sheet-pg"></div></div>
-    <button class="btn bg" onclick="confirmStart()">▶ Start Recording</button>
-    <button class="btn bo" style="margin-top:8px;margin-bottom:4px" onclick="closeSheet('sw-start')">Cancel</button>
+    <div class="sh-title">Odometer reading</div>
+    <div class="sh-sub">Optional — enter your odometer to get exact ATO readings</div>
+    <div class="f"><label class="fl">Odometer start (km)</label><input type="number" id="s-odo" placeholder="e.g. 45320" /></div>
+    <button class="btn bg" style="margin-bottom:4px" onclick="closeSheet('sw-odo')">Done</button>
   </div>
 </div>
 
@@ -653,8 +665,20 @@ function getPurpose(id){ return purposes.find(p=>p.id===id)||purposes[0] }
 //  INIT
 // ═══════════════════════════
 (function(){
-  // FY
+  // Auto-select current FY in export dropdown
   const now=new Date(),y=now.getFullYear(),m=now.getMonth();
+  // ATO FY: July (month 6) = new FY
+  const fyStart = m >= 6 ? y : y-1;
+  const fyStr = `${fyStart}-${String(fyStart+1).slice(2)}`;
+  const fySelect = document.getElementById('exp-fy');
+  if(fySelect){
+    for(let i=0;i<fySelect.options.length;i++){
+      if(fySelect.options[i].value===fyStr){ fySelect.selectedIndex=i; break; }
+    }
+  }
+  // Update ATO deduction label with current FY
+  const dedLbl=document.getElementById('s-ded')?.nextElementSibling;
+  if(dedLbl) dedLbl.textContent=`Est. ATO deduction · $0.88/km (FY ${fyStart}–${String(fyStart+1).slice(2)})`;
   // GPS dot init
   if(navigator.geolocation) document.getElementById('gps-lbl').textContent='GPS ready';
   renderPurposeChips();
@@ -803,106 +827,140 @@ function deletePurpose(){
 }
 
 // ═══════════════════════════
-//  HERO
+//  HERO — instant tap-to-record
 // ═══════════════════════════
 function heroTap(){
-  if(active){openEndSheet();return;}
-  document.getElementById('s-from').value='';
-  document.getElementById('s-to').value='';
-  document.getElementById('s-odo').value='';
-  syncSheetPurpose(selectedPurposeId);
-  openSheet('sw-start');
-  detectLoc('s-from');
+  if(active){ openEndSheet(); return; }
+  // Immediately begin trip with GPS location detected silently in background
+  instantStart(selectedPurposeId);
+}
+
+function instantStart(purposeId, prefillFrom, prefillTo){
+  if(active){ toast('⚠ End current trip first'); return; }
+  // Show detecting state on hero
+  document.getElementById('hero-loc-row').style.display='block';
+  document.getElementById('hero-loc-val').textContent='Detecting…';
+  document.getElementById('hero-s').textContent='Getting your location…';
+  // Begin trip immediately — location fills in async
+  beginTrip({ from:'Detecting location…', to:'(en route)', purposeId, odoStart: parseFloat(document.getElementById('s-odo').value)||null, prefillFrom, prefillTo });
+  // GPS reverse geocode for start
+  getLocationLabel(lat => {
+    if(active){ active.from = lat; }
+    document.getElementById('hero-loc-val').textContent = lat;
+    document.getElementById('lb-route').textContent = lat + ' → ' + (active&&active.to!=='(en route)'?active.to:'en route');
+    document.getElementById('hero-s').textContent = lat;
+    // Update CP
+    document.getElementById('cp-route').textContent = lat + ' → en route';
+  });
+}
+
+async function getLocationLabel(cb){
+  if(!navigator.geolocation){ cb('Location unavailable'); return; }
+  navigator.geolocation.getCurrentPosition(async pos=>{
+    const lat=pos.coords.latitude, lng=pos.coords.longitude;
+    try{
+      const r=await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&accept-language=en`);
+      const d=await r.json();
+      const a=d.address||{};
+      const suburb=a.suburb||a.city_district||a.neighbourhood||a.town||a.village||a.city||'';
+      const state=a.state_code||a.state||'';
+      const road=a.road||'';
+      const num=a.house_number||'';
+      const street=num?`${num} ${road}`:road;
+      cb([street,suburb,state].filter(Boolean).slice(0,3).join(', '));
+    }catch(e){ cb(`${lat.toFixed(4)}, ${lng.toFixed(4)}`); }
+  }, ()=>cb('Location unavailable'), {enableHighAccuracy:true,timeout:12000,maximumAge:10000});
 }
 
 // ═══════════════════════════
-//  LOCATION
+//  LOCATION — used only for end-trip destination field
 // ═══════════════════════════
 function detectLoc(fid){
   if(!navigator.geolocation){toast('⚠ GPS unavailable');return;}
   const inp=document.getElementById(fid);
   const btn=inp?inp.nextElementSibling:null;
   if(btn&&btn.classList.contains('lb'))btn.textContent='⏳';
-  navigator.geolocation.getCurrentPosition(pos=>{
+  navigator.geolocation.getCurrentPosition(async pos=>{
     if(btn&&btn.classList.contains('lb'))btn.textContent='📍';
-    reverseGeocode(pos.coords.latitude,pos.coords.longitude,fid);
+    const lat=pos.coords.latitude, lng=pos.coords.longitude;
+    try{
+      const r=await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&accept-language=en`);
+      const d=await r.json();
+      const a=d.address||{};
+      const sub=a.suburb||a.city_district||a.neighbourhood||a.town||a.village||a.city||'';
+      const state=a.state_code||a.state||'';
+      const road=a.road||'';
+      const num=a.house_number||'';
+      const street=num?`${num} ${road}`:road;
+      if(inp) inp.value=[street,sub,state].filter(Boolean).slice(0,3).join(', ');
+      toast('📍 Location detected');
+    }catch(e){ if(inp) inp.value=`${lat.toFixed(4)}, ${lng.toFixed(4)}`; }
   },()=>{
     if(btn&&btn.classList.contains('lb'))btn.textContent='📍';
-    toast('⚠ GPS unavailable — enter manually');
-  },{enableHighAccuracy:true,timeout:12000,maximumAge:30000});
-}
-async function reverseGeocode(lat,lng,fid){
-  const inp=document.getElementById(fid);
-  if(!inp) return;
-  try{
-    const r=await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&accept-language=en`);
-    const d=await r.json();
-    const a=d.address||{};
-    const suburb=a.suburb||a.city_district||a.neighbourhood||a.town||a.village||a.city||'';
-    const state=a.state_code||a.state||'';
-    const road=a.road||'';
-    const num=a.house_number||'';
-    const street=num?`${num} ${road}`:road;
-    inp.value=[street,suburb,state].filter(Boolean).slice(0,3).join(', ');
-    toast('📍 Location detected');
-  }catch(e){inp.value=`${lat.toFixed(4)}, ${lng.toFixed(4)}`}
+    toast('⚠ GPS unavailable');
+  },{enableHighAccuracy:true,timeout:12000,maximumAge:20000});
 }
 
 // ═══════════════════════════
 //  TRIP START
 // ═══════════════════════════
-function confirmStart(){
-  const from=document.getElementById('s-from').value.trim();
-  if(!from){toast('⚠ Enter a start location');return;}
-  closeSheet('sw-start');
-  beginTrip({from,to:document.getElementById('s-to').value.trim()||'(en route)',purposeId:sheetPurposeId,odoStart:parseFloat(document.getElementById('s-odo').value)||null});
-}
 function startFavTrip(i){
   if(active){toast('⚠ End current trip first');return;}
   const f=favs[i];
-  document.getElementById('s-from').value=f.from;
-  document.getElementById('s-to').value=f.to;
-  document.getElementById('s-odo').value='';
-  syncSheetPurpose(f.purposeId||'business');
-  openSheet('sw-start');
+  // Favs have a known destination — start immediately with prefill
+  instantStart(f.purposeId||'business', f.from, f.to);
 }
 function beginTrip(opts){
   const p=getPurpose(opts.purposeId);
   active={id:Date.now(),date:new Date().toISOString(),from:opts.from,to:opts.to,purposeId:opts.purposeId,purpose:p.name,purposeAto:p.ato,odoStart:opts.odoStart||null,odoEnd:null,distanceKm:0,durationSec:0,notes:''};
   gpsDist=0;elapsed=0;lastPos=null;curSpeed=0;
-  // Hero
+  // If fav prefill from — use it directly
+  if(opts.prefillFrom){ active.from=opts.prefillFrom; document.getElementById('hero-loc-val').textContent=opts.prefillFrom; }
+  if(opts.prefillTo){ active.to=opts.prefillTo; }
+  // Hero UI
   document.getElementById('hero').classList.add('rec');
   document.getElementById('hero-ring').classList.add('go');
   document.getElementById('hero-ring').textContent='⏺';
   document.getElementById('hero-h').textContent='Recording…';
-  document.getElementById('hero-s').textContent=active.from+' → '+active.to;
+  document.getElementById('hero-loc-row').style.display='block';
+  document.getElementById('odo-strip').style.display='block';
+  const odoVal=document.getElementById('s-odo').value;
+  document.getElementById('odo-strip-val').textContent=odoVal?`Odometer: ${odoVal} km`:'Add odometer reading (optional)';
   // Live bar
   document.getElementById('live-bar').style.display='flex';
-  document.getElementById('lb-route').textContent=active.from+' → '+active.to;
+  document.getElementById('lb-route').textContent=active.from+' → '+(active.to!=='(en route)'?active.to:'en route');
   // GPS dot
   document.getElementById('gps-dot').classList.add('on');
   document.getElementById('gps-lbl').textContent='tracking';
-  // GPS watch
+  // GPS watch — high accuracy with drift filtering
   if(navigator.geolocation){
     watchId=navigator.geolocation.watchPosition(pos=>{
       const c=pos.coords;
+      // Skip low-accuracy fixes (>20m accuracy = GPS drift noise)
+      if(c.accuracy && c.accuracy > 20) return;
       if(c.speed!=null) curSpeed=Math.round(c.speed*3.6);
-      if(lastPos){const d=haversine(lastPos.lat,lastPos.lng,c.latitude,c.longitude);if(d>0.005)gpsDist+=d;}
+      if(lastPos){
+        const d=haversine(lastPos.lat,lastPos.lng,c.latitude,c.longitude);
+        // Count steps >=3m only — filters stationary wobble but captures slow walking/driving
+        if(d >= 0.003) gpsDist+=d;
+      }
       lastPos={lat:c.latitude,lng:c.longitude};
-      if(document.getElementById('cp-spd')) document.getElementById('cp-spd').textContent=curSpeed;
-    },null,{enableHighAccuracy:true,maximumAge:3000,timeout:15000});
+      const spd=document.getElementById('cp-spd');if(spd)spd.textContent=curSpeed;
+    },err=>{console.warn('GPS:',err.code);},
+    {enableHighAccuracy:true,maximumAge:1000,timeout:20000});
   }
   timerTick=setInterval(()=>{
-    elapsed++;active.durationSec=elapsed;
+    elapsed++;if(active)active.durationSec=elapsed;
     const m=Math.floor(elapsed/60),s=elapsed%60;
     const t=`${m}:${String(s).padStart(2,'0')}`;
-    const km=gpsDist.toFixed(1);
-    document.getElementById('lb-stat').textContent=`${km} km · ${t}`;
-    document.getElementById('e-km').textContent=km;
-    document.getElementById('e-dur').textContent=t;
-    // CP
-    if(document.getElementById('cp-km')) document.getElementById('cp-km').textContent=km;
-    if(document.getElementById('cp-dur')) document.getElementById('cp-dur').textContent=t;
+    const km1=gpsDist.toFixed(1);
+    const km2=gpsDist.toFixed(2);
+    document.getElementById('lb-stat').textContent=`${km1} km · ${t}`;
+    const ekm=document.getElementById('e-km');if(ekm)ekm.textContent=km1;
+    const edur=document.getElementById('e-dur');if(edur)edur.textContent=t;
+    // CP uses 2 decimal places so short trips show progress (e.g. 0.12 not 0.0)
+    const cpkm=document.getElementById('cp-km');if(cpkm)cpkm.textContent=km2;
+    const cpdur=document.getElementById('cp-dur');if(cpdur)cpdur.textContent=t;
   },1000);
   // CP recording state
   if(document.getElementById('cp-overlay').classList.contains('on')) switchCpToRecording();
@@ -914,14 +972,20 @@ function beginTrip(opts){
 // ═══════════════════════════
 function openEndSheet(){
   if(!active) return;
-  document.getElementById('end-sub').textContent=active.from+' → '+active.to;
+  document.getElementById('end-sub').textContent=active.from+' → '+(active.to!=='(en route)'?active.to:'en route');
   document.getElementById('e-km').textContent=gpsDist.toFixed(1);
   const m=Math.floor(elapsed/60),s=elapsed%60;
   document.getElementById('e-dur').textContent=`${m}:${String(s).padStart(2,'0')}`;
-  document.getElementById('e-to').value=active.to!=='(en route)'?active.to:'';
+  // Auto-detect destination
+  const eToInput=document.getElementById('e-to');
+  eToInput.value='';
+  eToInput.placeholder='Detecting your location…';
+  getLocationLabel(label=>{
+    eToInput.value=label;
+    eToInput.placeholder='Destination suburb';
+  });
   document.getElementById('e-odo').value='';
   document.getElementById('e-notes').value='';
-  if(active.to==='(en route)') detectLoc('e-to');
   openSheet('sw-end');
 }
 function saveTrip(){
@@ -929,7 +993,7 @@ function saveTrip(){
   const toVal=document.getElementById('e-to').value.trim()||active.to;
   const odoEnd=parseFloat(document.getElementById('e-odo').value)||null;
   active.to=toVal;active.odoEnd=odoEnd;active.notes=document.getElementById('e-notes').value.trim();
-  active.distanceKm=odoEnd&&active.odoStart?parseFloat((odoEnd-active.odoStart).toFixed(1)):parseFloat(gpsDist.toFixed(1));
+  active.distanceKm=odoEnd&&active.odoStart?parseFloat((odoEnd-active.odoStart).toFixed(2)):parseFloat(gpsDist.toFixed(2));
   trips.unshift({...active});save();
   closeSheet('sw-end');
   stopRec();toast(`✓ Saved — ${active.distanceKm} km`);active=null;renderRecent();
@@ -947,7 +1011,10 @@ function stopRec(){
   document.getElementById('hero-ring').classList.remove('go');
   document.getElementById('hero-ring').textContent='🚗';
   document.getElementById('hero-h').textContent='Start a Trip';
-  document.getElementById('hero-s').textContent='Tap to begin recording';
+  document.getElementById('hero-s').textContent='Tap to detect location & begin';
+  document.getElementById('hero-loc-row').style.display='none';
+  document.getElementById('odo-strip').style.display='none';
+  document.getElementById('s-odo').value='';
   document.getElementById('live-bar').style.display='none';
   // CP back to idle
   document.getElementById('cp-idle').style.display='flex';
@@ -976,7 +1043,7 @@ function startDriveDetection(){
     if(avg<4)speedBuf=[];
   },null,{enableHighAccuracy:false,maximumAge:8000,timeout:30000});
 }
-function acceptDetect(){document.getElementById('ddm').classList.remove('open');detectCooldown=false;heroTap();}
+function acceptDetect(){document.getElementById('ddm').classList.remove('open');detectCooldown=false;instantStart(selectedPurposeId);}
 function dismissDetect(){document.getElementById('ddm').classList.remove('open');setTimeout(()=>{detectCooldown=false},300000);}
 
 // ═══════════════════════════
@@ -1147,12 +1214,12 @@ function copySum(){
 function openCarPlay(){
   document.getElementById('cp-overlay').classList.add('on');
   renderCpPurposeGrid();
-  if(active){switchCpToRecording();}
-  else{document.getElementById('cp-idle').style.display='flex';document.getElementById('cp-rec').style.display='none';}
-  // Prompt for screen mirroring
-  toast('Mirror screen via Control Centre → Screen Mirroring');
+  updateCpClock();
+  if(active){ switchCpToRecording(); }
+  else{ document.getElementById('cp-idle').style.display='flex'; document.getElementById('cp-rec').style.display='none'; }
+  toast('📺 Car Mode — mirror via Control Centre → Screen Mirroring');
 }
-function closeCarPlay(){document.getElementById('cp-overlay').classList.remove('on')}
+function closeCarPlay(){ document.getElementById('cp-overlay').classList.remove('on'); }
 
 function renderCpPurposeGrid(){
   const el=document.getElementById('cp-pg');
@@ -1162,78 +1229,102 @@ function renderCpPurposeGrid(){
       <div class="cp-pc-label">${p.name}</div>
     </div>`).join('');
 }
-let cpPurposeId=null;
 function cpSelectPurp(id){
-  cpPurposeId=id;selectedPurposeId=id;
-  renderCpPurposeGrid();renderPurposeChips();
+  selectedPurposeId=id;
+  renderCpPurposeGrid();
+  renderPurposeChips();
 }
+
+// CarPlay START — one tap, no form, GPS detects instantly
 function cpStart(){
-  const pid=cpPurposeId||selectedPurposeId||'business';
-  // Start immediately — detect location in background
+  if(active){ switchCpToRecording(); return; }
+  const pid=selectedPurposeId||'business';
+  const p=getPurpose(pid);
+  // Show recording panel immediately
   document.getElementById('cp-idle').style.display='none';
   document.getElementById('cp-rec').style.display='flex';
-  document.getElementById('cp-idle-h').textContent='Recording…';
-  const p=getPurpose(pid);
-  document.getElementById('cp-route').textContent='Detecting location…';
+  document.getElementById('cp-confirm').classList.remove('on');
+  document.getElementById('cp-route').textContent='📍 Detecting…';
   document.getElementById('cp-purpose-lbl').textContent=p.name;
-  // Detect start
-  if(navigator.geolocation){
-    navigator.geolocation.getCurrentPosition(pos=>{
-      reverseGeocode(pos.coords.latitude,pos.coords.longitude,'_cp_from_tmp');
-    },null,{enableHighAccuracy:true,timeout:10000,maximumAge:5000});
-  }
-  beginTrip({from:'(detecting…)',to:'(en route)',purposeId:pid,odoStart:null});
-  document.getElementById('cp-route').textContent=active.from+' → '+active.to;
+  // Begin trip — from fills in async
+  beginTrip({ from:'Detecting location…', to:'(en route)', purposeId:pid, odoStart:null });
+  // Background GPS detect for start label
+  getLocationLabel(label=>{
+    if(active){ active.from=label; }
+    document.getElementById('cp-route').textContent=label+' → en route';
+    document.getElementById('lb-route').textContent=label+' → en route';
+    document.getElementById('hero-loc-val').textContent=label;
+    document.getElementById('hero-s').textContent=label;
+  });
 }
-// Temp field for CP geocoding
-(function(){const tmp=document.createElement('input');tmp.id='_cp_from_tmp';tmp.style.display='none';document.body.appendChild(tmp);tmp.addEventListener('input',function(){if(active)active.from=this.value;document.getElementById('cp-route').textContent=this.value+' → (en route)';document.getElementById('lb-route').textContent=this.value+' → (en route)';});})();
 
 function switchCpToRecording(){
   if(!active) return;
   document.getElementById('cp-idle').style.display='none';
   document.getElementById('cp-rec').style.display='flex';
+  document.getElementById('cp-confirm').classList.remove('on');
   const p=getPurpose(active.purposeId);
-  document.getElementById('cp-route').textContent=active.from+' → '+active.to;
+  document.getElementById('cp-route').textContent=active.from+' → '+(active.to!=='(en route)'?active.to:'en route');
   document.getElementById('cp-purpose-lbl').textContent=p.name;
   document.getElementById('cp-km').textContent=gpsDist.toFixed(1);
 }
-function cpConfirmEnd(){document.getElementById('cp-confirm').classList.add('on')}
+
+// CarPlay END — auto detects destination, saves, no form
+function cpConfirmEnd(){ document.getElementById('cp-confirm').classList.add('on'); }
+
 function cpEndTrip(){
   document.getElementById('cp-confirm').classList.remove('on');
-  // Auto-save: detect destination
-  if(active){
-    active.distanceKm=parseFloat(gpsDist.toFixed(1));
-    active.notes='Saved via Car Mode';
-    // Try detect destination
-    if(navigator.geolocation){
-      navigator.geolocation.getCurrentPosition(pos=>{
-        reverseGeocode(pos.coords.latitude,pos.coords.longitude,'_cp_to_tmp');
-        setTimeout(()=>{
-          const toTmp=document.getElementById('_cp_to_tmp');
-          if(toTmp&&toTmp.value&&active) active.to=toTmp.value;
-          trips.unshift({...active});save();stopRec();active=null;
-          renderRecent();toast(`✓ Trip saved — ${active?active.distanceKm:gpsDist.toFixed(1)} km`);
-        },3000);
-      },()=>{trips.unshift({...active});save();stopRec();active=null;renderRecent();toast('✓ Trip saved');},{enableHighAccuracy:true,timeout:8000});
-    } else {trips.unshift({...active});save();stopRec();active=null;renderRecent();}
-  }
-}
-(function(){const tmp=document.createElement('input');tmp.id='_cp_to_tmp';tmp.style.display='none';document.body.appendChild(tmp);})();
-
-function cpSaveQuick(){
-  // Save current segment and start new one (for multi-stop trips)
   if(!active) return;
-  active.distanceKm=parseFloat(gpsDist.toFixed(1));
-  trips.unshift({...active});save();
-  toast('✓ Segment saved');
-  // Reset distance for next leg
-  gpsDist=0;elapsed=0;active.date=new Date().toISOString();active.from=active.to;active.to='(en route)';active.id=Date.now();
+  const savedKm=parseFloat(gpsDist.toFixed(2));
+  active.distanceKm=savedKm;
+  // Detect destination in background then save
+  document.getElementById('cp-route').textContent='📍 Detecting destination…';
+  getLocationLabel(label=>{
+    if(active){
+      active.to=label;
+      active.notes='Saved via Car Mode';
+      trips.unshift({...active});
+      save();
+      const km=active.distanceKm;
+      active=null;
+      stopRec();
+      renderRecent();
+      toast(`✓ Trip saved — ${km} km`);
+    }
+  });
+  // Fallback: save after 5s even if geocode hangs
+  setTimeout(()=>{
+    if(active){
+      trips.unshift({...active});save();
+      const km=active.distanceKm;active=null;stopRec();renderRecent();toast(`✓ Trip saved — ${km} km`);
+    }
+  },5000);
+}
+
+// CarPlay SAVE SEGMENT — save current leg, continue recording next
+function cpSaveQuick(){
+  if(!active) return;
+  const km=parseFloat(gpsDist.toFixed(1));
+  active.distanceKm=km;
+  getLocationLabel(label=>{
+    if(active){
+      const seg={...active, to:label, distanceKm:km};
+      trips.unshift(seg); save();
+      toast(`✓ Leg saved — ${km} km`);
+      // Reset for next leg
+      gpsDist=0; elapsed=0;
+      active.date=new Date().toISOString();
+      active.from=label; active.to='(en route)'; active.id=Date.now();
+      document.getElementById('cp-route').textContent=label+' → en route';
+    }
+  });
 }
 
 function updateCpClock(){
   const now=new Date();
   const t=now.toLocaleTimeString('en-AU',{hour:'2-digit',minute:'2-digit',hour12:false});
   const el=document.getElementById('cp-clock');if(el)el.textContent=t;
+  setTimeout(updateCpClock, (60-new Date().getSeconds())*1000);
 }
 
 // ═══════════════════════════
